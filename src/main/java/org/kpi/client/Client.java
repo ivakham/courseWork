@@ -2,6 +2,7 @@ package org.kpi.client;
 
 import java.io.*;
 import java.net.Socket;
+import java.rmi.NoSuchObjectException;
 import java.util.Scanner;
 
 public class Client {
@@ -9,24 +10,24 @@ public class Client {
     private static DataInputStream inputStream;
     private static DataOutputStream outputStream;
 
-    public static void findWord(boolean isIndexed) throws IOException {
-        System.out.println("Please, enter word, you want to search: ");
+    public static void findWord(boolean isIndexed, String wordToSearch) throws IOException {
         if (!isIndexed) {
             scanner.nextLine();
         }
-        String wordToSearch = scanner.nextLine().toLowerCase();
         outputStream.writeUTF(wordToSearch);
-
+        System.out.println("Searching...");
         String indexedFiles = inputStream.readUTF();
         if (indexedFiles.equals("no files found")) {
-            System.out.println("Sorry, but there is no such word in files.");
+            System.out.println("No such word in files.");
         } else {
             String cleanString = indexedFiles.replace("[", "").replace("]", "");
             String[] filesWithWord = cleanString.split(", ");
-            System.out.println("Files that contain the word that you have searched for:");
+            System.out.println("------------------");
+            System.out.println("Found files:");
             for (String filePath : filesWithWord) {
                 System.out.println(filePath);
             }
+            System.out.println("------------------");
         }
     }
 
@@ -34,31 +35,32 @@ public class Client {
         try (Socket socket = new Socket("localhost", 8000)) {
             inputStream = new DataInputStream(socket.getInputStream());
             outputStream = new DataOutputStream(socket.getOutputStream());
-            boolean findOneMoreWord = false;
-            System.out.println("Welcome to 'Indexer'!!! \nHere you can search words in movie reviews. \nSo we can start our work ;)");
-
-            System.out.println("First step: files indexing. Now you will enter number of threads that will be used to index files.");
-
+            boolean findOneMoreWord = true;
             boolean isIndexed = inputStream.readBoolean();
-            System.out.println(isIndexed);
+            System.out.println("System is indexed: " + isIndexed);
             if (!isIndexed) {
                 System.out.println("Please, enter number of threads: ");
                 int numberOfThreads = scanner.nextInt();
                 outputStream.writeInt(numberOfThreads);
                 long executionTime = inputStream.readLong();
-                System.out.printf("Time for parallel execution with %s wordToSearch: %s wordToSearch ms\n", numberOfThreads, executionTime);
+                System.out.printf("Time for parallel execution with %s wordToSearch: %s ms\n", numberOfThreads, executionTime);
             } else {
                 System.out.println("Files have already been indexed by another client.");
             }
+            String wordToFind;
+            System.out.print("Enter word to find: ");
+            wordToFind = scanner.nextLine();
 
-            System.out.println("Second step: word search.");
             do {
-                findWord(isIndexed);
+                findWord(isIndexed, wordToFind);
                 isIndexed = true;
-                System.out.println("Do You want to find one more word?(y - yes, n - no)");
-                String wantToFindMore = scanner.nextLine().toLowerCase();
-                outputStream.writeUTF(wantToFindMore);
-                findOneMoreWord = wantToFindMore.equals("y");
+                System.out.print("Enter another word to find or 'q' for leave program: ");
+                wordToFind = scanner.nextLine().toLowerCase();
+                if(wordToFind.equals("q")) {
+                    outputStream.writeUTF(wordToFind);
+                    findOneMoreWord = false;
+                }
+               
             } while (findOneMoreWord);
 
         } catch (Exception e) {

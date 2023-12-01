@@ -44,6 +44,10 @@ public class ServerThread extends Thread {
 
             do {
                 String word = inputStream.readUTF();
+                findOneMoreWord = word.equals("q");
+                System.out.println("Client " + (!findOneMoreWord ? "" : "don't ") + "want to find one more word");
+                if(findOneMoreWord)
+                    continue;
                 System.out.println("Client want to find such word: " + word);
                 Set<String> indexedFiles = invertedIndex.getListOfFilesByKey(word);
                 if (indexedFiles == null || indexedFiles.isEmpty()) {
@@ -53,9 +57,8 @@ public class ServerThread extends Thread {
                     System.out.println("Files were found");
                     outputStream.writeUTF(indexedFiles.toString());
                 }
-                findOneMoreWord = inputStream.readUTF().equals("y");
-                System.out.println("Client " + (findOneMoreWord ? "" : "don't ") + "want to find one more word");
-            } while (findOneMoreWord);
+
+            } while (!findOneMoreWord);
 
         } catch (Exception e) {
             e.printStackTrace();
